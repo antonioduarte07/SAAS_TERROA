@@ -51,28 +51,41 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
     refetchInterval: 30000, // Atualiza a cada 30 segundos
   })
 
-  const { data: lastBackup } = useQuery({
+  const { data: lastBackup, isLoading: isLoadingBackup } = useQuery({
     queryKey: ['last-backup'],
     queryFn: async () => {
       try {
-        const { data: backups } = await supabase.storage
+        console.log('Buscando backups no storage...')
+        const { data: backups, error } = await supabase.storage
           .from('backups')
           .list()
 
-        if (!backups || backups.length === 0) return null
+        if (error) {
+          console.error('Erro ao listar backups:', error)
+          return null
+        }
+
+        console.log('Backups encontrados:', backups)
+
+        if (!backups || backups.length === 0) {
+          console.log('Nenhum backup encontrado')
+          return null
+        }
 
         // Ordenar por data de criação (mais recente primeiro)
         const sortedBackups = backups.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
 
+        console.log('Último backup:', sortedBackups[0])
         return sortedBackups[0]
       } catch (error) {
         console.error('Erro ao obter último backup:', error)
         return null
       }
     },
-    refetchInterval: 30000, // Atualiza a cada 30 segundos
+    refetchInterval: 10000, // Atualiza a cada 10 segundos
+    retry: 3,
   })
 
   // Mutação para fazer backup manual
@@ -93,13 +106,19 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
       return response.json()
     },
     onSuccess: () => {
+      console.log('Backup realizado com sucesso, atualizando queries...')
       // Atualizar as queries relacionadas ao backup
       queryClient.invalidateQueries({ queryKey: ['backup-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['last-backup'] })
+      // Forçar refetch imediato
+      queryClient.refetchQueries({ queryKey: ['last-backup'] })
+    },
+    onError: (error) => {
+      console.error('Erro ao fazer backup:', error)
     },
   })
 
-  if (isLoading) {
+  if (isLoading || isLoadingBackup) {
     return (
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ p: compact ? 2 : 3 }}>
