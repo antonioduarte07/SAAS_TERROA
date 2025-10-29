@@ -41,16 +41,13 @@ module.exports = async function handler(req, res) {
     // Verificar se é um backup manual
     const { isIncremental = false } = req.body
     
-    // Tabelas para backup
+    // Tabelas para backup (apenas as que existem)
     const tables = [
       'profiles',
       'clients', 
       'products',
       'orders',
       'order_items',
-      'commissions',
-      'commission_configs',
-      'audit_logs',
     ]
 
     const backupData = {
