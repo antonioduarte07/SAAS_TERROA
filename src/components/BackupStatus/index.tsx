@@ -23,7 +23,7 @@ import { createClient } from '@supabase/supabase-js'
 // Cliente Supabase com service role para acessar storage
 const supabaseAdmin = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+  import.meta.env.SUPABASE_SERVICE_ROLE_KEY
 )
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
