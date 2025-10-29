@@ -18,6 +18,13 @@ import {
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+// Cliente Supabase com service role para acessar storage
+const supabaseAdmin = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+)
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -58,7 +65,7 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
         console.log('Buscando backups no storage...')
         console.log('Supabase client:', supabase)
         
-        const { data: backups, error } = await supabase.storage
+        const { data: backups, error } = await supabaseAdmin.storage
           .from('backups')
           .list()
 
