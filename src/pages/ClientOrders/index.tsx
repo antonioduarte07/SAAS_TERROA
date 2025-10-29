@@ -26,9 +26,18 @@ interface ClientOrderColumn {
   format?: (value: unknown) => React.ReactNode; // Usar unknown aqui
 }
 
-// Definir uma interface para o tipo de Pedido retornado pela query com o nome do cliente incluído
+// Definir uma interface para o tipo de Pedido retornado pela query com informações detalhadas
 interface PedidoClienteView extends Order {
-  client_name?: string; // Tornar opcional caso a query não retorne (embora a intenção seja que retorne)
+  client_name?: string;
+  seller?: {
+    name: string;
+    role: string;
+  };
+  receipt_date?: string;
+  payment_date?: string;
+  discount?: number;
+  discount_type?: string;
+  updated_at?: string;
 }
 
 export default function ClientOrders() {
@@ -67,8 +76,21 @@ export default function ClientOrders() {
       
       const { data, error } = await supabase
         .from('orders')
-        // Selecionar campos relevantes para o cliente. Ocultar 'seller_id', 'discount', etc.
-        .select('id, client_id, status, total_amount, final_amount, created_at, notes') // Campos visíveis para o cliente
+        .select(`
+          id, 
+          client_id, 
+          status, 
+          total_amount, 
+          final_amount, 
+          discount,
+          discount_type,
+          created_at, 
+          updated_at,
+          notes,
+          receipt_date,
+          payment_date,
+          seller:profiles!orders_seller_id_fkey(name, role)
+        `)
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
@@ -121,9 +143,9 @@ export default function ClientOrders() {
     {
       id: 'status',
       label: 'Status',
-      minWidth: 130,
+      minWidth: 120,
       align: 'left',
-       format: (value: unknown) => {
+      format: (value: unknown) => {
         const status = value as Order['status'];
         return status ? (
           <Chip
@@ -134,10 +156,10 @@ export default function ClientOrders() {
         ) : null;
       },
     },
-     {
+    {
       id: 'total_amount',
-      label: 'Total',
-      minWidth: 130,
+      label: 'Valor Original',
+      minWidth: 120,
       align: 'right',
       format: (value: unknown) => {
         const totalAmount = value as number;
@@ -145,9 +167,23 @@ export default function ClientOrders() {
       },
     },
     {
+      id: 'discount',
+      label: 'Desconto',
+      minWidth: 100,
+      align: 'right',
+      format: (value: unknown, row: any) => {
+        const discount = value as number;
+        const discountType = row?.discount_type;
+        if (discount && discount > 0) {
+          return discountType === 'global' ? `${discount}%` : `R$ ${discount.toFixed(2)}`;
+        }
+        return '-';
+      },
+    },
+    {
       id: 'final_amount',
-      label: 'Total Final',
-      minWidth: 130,
+      label: 'Valor Final',
+      minWidth: 120,
       align: 'right',
       format: (value: unknown) => {
         const finalAmount = value as number;
@@ -155,23 +191,52 @@ export default function ClientOrders() {
       },
     },
     {
+      id: 'seller',
+      label: 'Vendedor',
+      minWidth: 150,
+      align: 'left',
+      format: (value: unknown) => {
+        const seller = value as { name: string; role: string };
+        return seller?.name || 'Não informado';
+      },
+    },
+    {
       id: 'created_at',
-      label: 'Data Criação',
-      minWidth: 130,
+      label: 'Data do Pedido',
+      minWidth: 120,
       align: 'left',
       format: (value: unknown) => {
         const createdAt = value as string;
-        return createdAt ? new Date(createdAt).toLocaleDateString('pt-BR') : 'Data Inválida';
+        return createdAt ? new Date(createdAt).toLocaleDateString('pt-BR') : '-';
       },
     },
-     // Adicionar mais colunas visíveis para o cliente (ex: notas)
-     {
-       id: 'notes',
-       label: 'Notas',
-       minWidth: 200,
-       align: 'left',
-       format: (value: unknown) => value as string || '-',
-     }
+    {
+      id: 'receipt_date',
+      label: 'Data de Entrega',
+      minWidth: 120,
+      align: 'left',
+      format: (value: unknown) => {
+        const receiptDate = value as string;
+        return receiptDate ? new Date(receiptDate).toLocaleDateString('pt-BR') : 'Não agendada';
+      },
+    },
+    {
+      id: 'payment_date',
+      label: 'Data de Pagamento',
+      minWidth: 120,
+      align: 'left',
+      format: (value: unknown) => {
+        const paymentDate = value as string;
+        return paymentDate ? new Date(paymentDate).toLocaleDateString('pt-BR') : 'Pendente';
+      },
+    },
+    {
+      id: 'notes',
+      label: 'Observações',
+      minWidth: 200,
+      align: 'left',
+      format: (value: unknown) => value as string || '-',
+    }
   ], []); // As colunas são estáticas para esta view
 
   // Mapear os dados dos pedidos para o formato esperado pela tabela (se necessário formatação específica)
