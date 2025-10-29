@@ -20,7 +20,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
-import { createBackup } from '@/lib/backup'
 
 interface BackupStatusProps {
   compact?: boolean
@@ -79,7 +78,19 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
   // Mutação para fazer backup manual
   const backupMutation = useMutation({
     mutationFn: async () => {
-      await createBackup(false, { type: 'supabase' })
+      const response = await fetch('/api/backup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isIncremental: false }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar backup')
+      }
+
+      return response.json()
     },
     onSuccess: () => {
       // Atualizar as queries relacionadas ao backup
