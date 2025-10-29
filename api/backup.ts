@@ -23,8 +23,17 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Supabase URL:', supabaseUrl ? 'Configurada' : 'NÃO CONFIGURADA')
+    console.log('Service Key:', supabaseServiceKey ? 'Configurada' : 'NÃO CONFIGURADA')
+    
     if (!supabaseUrl || !supabaseServiceKey) {
-      return res.status(500).json({ error: 'Variáveis de ambiente não configuradas' })
+      return res.status(500).json({ 
+        error: 'Variáveis de ambiente não configuradas',
+        details: {
+          supabaseUrl: !!supabaseUrl,
+          serviceKey: !!supabaseServiceKey
+        }
+      })
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
