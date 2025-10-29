@@ -54,7 +54,7 @@ export default function Login() {
         }}
       >
         <Typography variant="h4" component="h1" gutterBottom align="center">
-          AgroSales PRO
+          SAAS TERROA
         </Typography>
 
         <Typography variant="h6" gutterBottom align="center">
