@@ -1,15 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+const { createClient } = require('@supabase/supabase-js')
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export async function POST(request: NextRequest) {
+export default async function handler(req, res) {
+  // Configurar CORS
+  res.setHeader('Access-Control-Allow-Credentials', true)
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  )
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end()
+    return
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   try {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return res.status(500).json({ error: 'Variáveis de ambiente não configuradas' })
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     // Verificar se é um backup manual
-    const { isIncremental = false } = await request.json()
+    const { isIncremental = false } = req.body
     
     // Tabelas para backup
     const tables = [
@@ -23,7 +44,7 @@ export async function POST(request: NextRequest) {
       'audit_logs',
     ]
 
-    const backupData: any = {
+    const backupData = {
       tables: {},
       timestamp: new Date().toISOString(),
       version: '1.0.0',
@@ -57,10 +78,7 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('Erro ao fazer upload do backup:', uploadError)
-      return NextResponse.json(
-        { error: 'Erro ao salvar backup' },
-        { status: 500 }
-      )
+      return res.status(500).json({ error: 'Erro ao salvar backup' })
     }
 
     // Atualizar última execução na tabela backup_schedules
@@ -71,7 +89,7 @@ export async function POST(request: NextRequest) {
         last_run: new Date().toISOString()
       })
 
-    return NextResponse.json({
+    res.status(200).json({
       success: true,
       filename,
       message: 'Backup criado com sucesso'
@@ -79,9 +97,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro ao criar backup:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    res.status(500).json({ error: 'Erro interno do servidor' })
   }
 }
