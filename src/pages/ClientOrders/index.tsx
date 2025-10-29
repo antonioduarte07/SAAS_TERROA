@@ -29,10 +29,7 @@ interface ClientOrderColumn {
 // Definir uma interface para o tipo de Pedido retornado pela query com informações detalhadas
 interface PedidoClienteView extends Order {
   client_name?: string;
-  seller?: {
-    name: string;
-    role: string;
-  };
+  seller_id?: string;
   receipt_date?: string;
   payment_date?: string;
   discount?: number;
@@ -63,6 +60,33 @@ export default function ClientOrders() {
 
   const clientId = clientData?.[0]?.id; // Obter o ID do cliente
 
+  // Query para buscar vendedores (apenas os que aparecem nos pedidos)
+  const { data: sellersData } = useQuery({
+    queryKey: ['sellers-for-orders'],
+    queryFn: async () => {
+      if (!clientId) return [];
+      
+      // Primeiro buscar os seller_ids dos pedidos do cliente
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('seller_id')
+        .eq('client_id', clientId);
+      
+      if (!ordersData?.length) return [];
+      
+      const sellerIds = [...new Set(ordersData.map(o => o.seller_id))];
+      
+      // Buscar dados dos vendedores
+      const { data: sellers } = await supabase
+        .from('profiles')
+        .select('id, name, role')
+        .in('id', sellerIds);
+      
+      return sellers || [];
+    },
+    enabled: !!clientId,
+  });
+
   // Query para buscar pedidos associados a este client_id
   const { data: orders, isLoading: isLoadingOrders, error: errorOrders } = useQuery<PedidoClienteView[]> ({
     queryKey: ['clientOrders', clientId],
@@ -79,6 +103,7 @@ export default function ClientOrders() {
         .select(`
           id, 
           client_id, 
+          seller_id,
           status, 
           total_amount, 
           final_amount, 
@@ -88,8 +113,7 @@ export default function ClientOrders() {
           updated_at,
           notes,
           receipt_date,
-          payment_date,
-          seller:profiles!orders_seller_id_fkey(name, role)
+          payment_date
         `)
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
@@ -168,14 +192,13 @@ export default function ClientOrders() {
     },
     {
       id: 'discount',
-      label: 'Desconto',
+      label: 'Desconto (%)',
       minWidth: 100,
       align: 'right',
       format: (value: unknown, row: any) => {
         const discount = value as number;
-        const discountType = row?.discount_type;
         if (discount && discount > 0) {
-          return discountType === 'global' ? `${discount}%` : `R$ ${discount.toFixed(2)}`;
+          return `${discount}%`;
         }
         return '-';
       },
@@ -191,12 +214,13 @@ export default function ClientOrders() {
       },
     },
     {
-      id: 'seller',
+      id: 'seller_id',
       label: 'Vendedor',
       minWidth: 150,
       align: 'left',
-      format: (value: unknown) => {
-        const seller = value as { name: string; role: string };
+      format: (value: unknown, row: any) => {
+        const sellerId = value as string;
+        const seller = sellersData?.find(s => s.id === sellerId);
         return seller?.name || 'Não informado';
       },
     },
