@@ -56,9 +56,13 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
     queryFn: async () => {
       try {
         console.log('Buscando backups no storage...')
+        console.log('Supabase client:', supabase)
+        
         const { data: backups, error } = await supabase.storage
           .from('backups')
           .list()
+
+        console.log('Response completa:', { data: backups, error })
 
         if (error) {
           console.error('Erro ao listar backups:', error)
@@ -66,6 +70,7 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
         }
 
         console.log('Backups encontrados:', backups)
+        console.log('Tipo de backups:', typeof backups, 'Array?', Array.isArray(backups))
 
         if (!backups || backups.length === 0) {
           console.log('Nenhum backup encontrado')
