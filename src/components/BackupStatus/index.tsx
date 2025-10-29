@@ -7,22 +7,33 @@ import {
   Avatar,
   Chip,
   CircularProgress,
+  Button,
 } from '@mui/material'
 import {
   CloudSync,
   CheckCircle,
   Error,
   Schedule,
+  Backup,
 } from '@mui/icons-material'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
+import { useAuth } from '@/contexts/AuthContext'
+import { createBackup } from '@/lib/backup'
 
 interface BackupStatusProps {
   compact?: boolean
 }
 
 export default function BackupStatus({ compact = false }: BackupStatusProps) {
+  const { role } = useAuth()
+  const queryClient = useQueryClient()
+
+  // Só mostrar para administradores
+  if (role !== 'admin') {
+    return null
+  }
   const { data: backupSchedule, isLoading } = useQuery({
     queryKey: ['backup-schedule'],
     queryFn: async () => {
@@ -63,6 +74,18 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
       }
     },
     refetchInterval: 30000, // Atualiza a cada 30 segundos
+  })
+
+  // Mutação para fazer backup manual
+  const backupMutation = useMutation({
+    mutationFn: async () => {
+      await createBackup(false, { type: 'supabase' })
+    },
+    onSuccess: () => {
+      // Atualizar as queries relacionadas ao backup
+      queryClient.invalidateQueries({ queryKey: ['backup-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['last-backup'] })
+    },
   })
 
   if (isLoading) {
@@ -145,13 +168,25 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
             }
           </Typography>
         </Box>
-        <Chip
-          icon={getStatusIcon()}
-          label={getStatusText()}
-          color={getStatusColor()}
-          size="small"
-          variant="outlined"
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            icon={getStatusIcon()}
+            label={getStatusText()}
+            color={getStatusColor()}
+            size="small"
+            variant="outlined"
+          />
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Backup />}
+            onClick={() => backupMutation.mutate()}
+            disabled={backupMutation.isPending}
+            sx={{ minWidth: 'auto' }}
+          >
+            {backupMutation.isPending ? 'Fazendo...' : 'Backup'}
+          </Button>
+        </Box>
       </Box>
     )
   }
@@ -185,12 +220,23 @@ export default function BackupStatus({ compact = false }: BackupStatusProps) {
               }
             </Typography>
           </Box>
-          <Chip
-            icon={getStatusIcon()}
-            label={getStatusText()}
-            color={getStatusColor()}
-            variant="outlined"
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Chip
+              icon={getStatusIcon()}
+              label={getStatusText()}
+              color={getStatusColor()}
+              variant="outlined"
+            />
+            <Button
+              variant="contained"
+              startIcon={<Backup />}
+              onClick={() => backupMutation.mutate()}
+              disabled={backupMutation.isPending}
+              sx={{ minWidth: 'auto' }}
+            >
+              {backupMutation.isPending ? 'Fazendo Backup...' : 'Fazer Backup'}
+            </Button>
+          </Box>
         </Box>
 
         {backupSchedule && (
