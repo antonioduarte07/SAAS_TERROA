@@ -58,7 +58,13 @@ export default function ClientOrders() {
   const { data: orders, isLoading: isLoadingOrders, error: errorOrders } = useQuery<PedidoClienteView[]> ({
     queryKey: ['clientOrders', clientId],
     queryFn: async () => {
-      if (!clientId) return []; // Não executa a query se não houver client_id
+      if (!clientId) {
+        console.log('❌ clientId não encontrado:', clientId);
+        return [];
+      }
+      
+      console.log('🔍 Buscando pedidos para clientId:', clientId);
+      
       const { data, error } = await supabase
         .from('orders')
         // Selecionar campos relevantes para o cliente. Ocultar 'seller_id', 'discount', etc.
@@ -66,7 +72,14 @@ export default function ClientOrders() {
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 Resultado da query de pedidos:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro ao buscar pedidos:', error);
+        throw error;
+      }
+      
+      console.log('✅ Pedidos encontrados:', data?.length || 0);
       // Mapear dados se precisar adicionar campos calculados ou formatar
       return data as PedidoClienteView[];
     },
