@@ -1,0 +1,2 @@
+[functions.backup-scheduler]
+verify_jwt = false 
