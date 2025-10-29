@@ -14,7 +14,7 @@ import Login from './pages/Login'
 import AdminVendedores from './pages/Admin/Vendedores'
 
 // Importar novas páginas (serão criadas depois)
-// import ClientOrders from './pages/ClientOrders';
+import ClientOrders from './pages/ClientOrders';
 
 // Componente para proteger rotas com base no papel
 const ProtectedRoute = ({ element, allowedRoles }: { element: React.ReactNode; allowedRoles: string[] }) => {
@@ -84,7 +84,7 @@ export const router = createBrowserRouter([
       // Nova rota para clientes verem seus pedidos
       {
         path: '/client/orders',
-        element: <ProtectedRoute element={<div>Tela de Pedidos do Cliente (WIP)</div>} allowedRoles={['cliente']} />, // Protegida para clientes
+        element: <ProtectedRoute element={<ClientOrders />} allowedRoles={['cliente']} />, // Protegida para clientes
       },
              // Rotas específicas do Admin
              {
